@@ -78,6 +78,12 @@ When starting from scratch, use the templates in:
 - `assets/frontend-hook-test.template.ts`
 - `assets/frontend-utility-test.template.ts`
 
+For detailed patterns and examples, see:
+
+- **`references/frontend-mocking.md`** — what to mock, mock placement, factory functions, state management stores, decision tree
+- **`references/frontend-async-testing.md`** — waitFor, findBy*, fake timers, API state lifecycle, useEffect testing, common async pitfalls
+- **`references/frontend-patterns.md`** — query priority, event patterns, form/modal/list/state testing, data-driven tests, debugging tips
+
 ## Network, Storage, and Time Control
 
 - Use request interception or a boundary stub instead of mocking every hook separately.
@@ -136,6 +142,50 @@ When the request covers a directory, feature area, or many files:
 
 This keeps failures attributable and prevents mock or provider mistakes from spreading across the entire batch.
 
+### Complexity-Based Processing Order
+
+For multi-file directories, process in this order:
+
+1. Utility functions (no React, simplest)
+2. Custom hooks (isolated logic)
+3. Presentational components (few or no props)
+4. Components with state and effects
+5. Components with API calls, routing, or many dependencies
+6. Container / index files (integration tests last)
+
+### Tracking Progress
+
+Use a todo list to track multi-file testing sessions:
+
+```
+Testing: path/to/directory/
+
+☐ utils/helpers.ts         [utility]
+☐ hooks/use-feature.ts     [hook]
+☐ empty-state.tsx          [component, simple]
+☐ item-card.tsx            [component, medium]
+☐ list.tsx                 [component, complex]
+☐ index.tsx                [integration]
+```
+
+Status symbols: `☐` not started → `⏳` in progress → `✅` complete → `❌` blocked.
+
+### When to Stop and Investigate
+
+Pause when:
+- More than 2 consecutive test failures
+- Mock-related errors appearing across multiple files
+- A test passes but coverage is unexpectedly low
+- The root cause of a failure is unclear
+
+**Never proceed to the next file while the current one is failing.** Mock and provider mistakes compound across tests.
+
+### Complexity Guidelines
+
+- **High complexity (>50 cyclomatic) or 500+ line files**: consider refactoring before testing; extract hooks, separate container and presentational layers.
+- **Medium complexity**: group related tests in `describe` blocks, use `test.each` for data-driven scenarios.
+- **Simple components**: standard structure with rendering, props, and edge case sections.
+
 ## Frontend Flake Patterns
 
 Most frontend flakes come from:
@@ -154,11 +204,40 @@ Fix flakes by making state transitions explicit and observable, not by sprinklin
 
 ## Review Checklist
 
-For user-facing changes, verify:
+### Before Writing Tests
 
-- the chosen test layer matches the risk
-- accessible names and semantics are asserted
-- keyboard access and focus behavior are covered when relevant
-- provider setup matches production shape closely enough
-- network, storage, and time are controlled explicitly
-- the final proof command is scoped, repeatable, and actually run
+- [ ] Read the source file completely
+- [ ] Identify component type: component, hook, utility, or page
+- [ ] Check for existing tests in the same directory
+- [ ] For directories: list all files that need coverage and order by complexity
+
+### Strategy
+
+- [ ] The chosen test layer matches the risk (unit/component/integration/browser)
+- [ ] For multi-file scopes: process one file at a time, verify each before proceeding
+- [ ] Prefer real shared/base components over mocking them
+- [ ] Only mock: API services, third-party side-effect libraries, complex providers
+
+### Test Quality
+
+- [ ] All async tests use `async/await`
+- [ ] `waitFor` wraps async assertions; `queryBy*` used for absence assertions
+- [ ] Fake timers are set up and torn down in `beforeEach`/`afterEach`
+- [ ] `vi.clearAllMocks()` and shared mock state reset in `beforeEach` (not `afterEach`)
+- [ ] Provider setup matches production shape closely enough
+- [ ] Network, storage, and time are controlled explicitly
+- [ ] No floating promises
+
+### Coverage
+
+- [ ] Rendering: component renders without crashing
+- [ ] Required props, optional props, default values covered
+- [ ] Loading, empty, error, success, retry states covered when present
+- [ ] Accessible names and semantics are asserted for user-facing changes
+- [ ] Keyboard access and focus behavior covered when relevant
+
+### Completion
+
+- [ ] The final proof command is scoped, repeatable, and actually run
+- [ ] No `any` types in mock factories without justification
+- [ ] TypeScript checks pass

@@ -42,6 +42,10 @@ Use `scripts/qa-scan.py`. It detects likely languages, frameworks, test runners,
 ### Code review and review feedback
 
 Read [references/code-review.md](./references/code-review.md) for:
+- step-by-step review workflow (determine target, prepare, analyze, feedback, cleanup)
+- remote PR checkout (`gh pr checkout`) and preflight verification (`npm run preflight`)
+- feedback structure: Summary → Findings (Critical / Improvements / Nitpicks) → Conclusion
+- tone guidance (constructive, explain why, acknowledge contribution)
 - review output format
 - severity taxonomy
 - self-review before requesting review
@@ -69,7 +73,25 @@ Read [references/frontend-testing.md](./references/frontend-testing.md) for:
 - async UI control
 - provider and fixture setup
 - network, storage, and time handling
-- flake repair and incremental test workflow
+- flake repair and incremental test workflow (including complexity-based ordering and todo-list tracking)
+
+Read [references/frontend-mocking.md](./references/frontend-mocking.md) for:
+- what to mock and what not to mock (base components, stores)
+- mock placement (global setup vs inline)
+- mock decision tree
+- factory functions and state management store testing
+
+Read [references/frontend-async-testing.md](./references/frontend-async-testing.md) for:
+- waitFor, findBy*, and userEvent async patterns
+- fake timer setup and teardown
+- API state lifecycle (loading → success → error → retry)
+- useEffect dependency and cleanup testing
+
+Read [references/frontend-patterns.md](./references/frontend-patterns.md) for:
+- query priority guide (getByRole > getByLabelText > …)
+- event, form, modal, list, and state testing patterns
+- data-driven tests with test.each
+- debugging tips and common mistakes
 
 ### Failure triage and debugging
 
@@ -98,6 +120,10 @@ Read [references/suite-architecture.md](./references/suite-architecture.md) for:
 ### Completion and release verification
 
 Read [references/verification.md](./references/verification.md) before saying something is fixed, asking for merge, or treating a release as ready.
+
+### Testing anti-patterns
+
+Read [references/testing-anti-patterns.md](./references/testing-anti-patterns.md) when writing mocks, reviewing test code, or adding test utilities. Covers: testing mock behavior instead of real behavior, test-only methods in production classes, mocking without understanding dependency chains, incomplete mocks, and tests written as afterthoughts.
 
 ### Anti-pattern sweep
 

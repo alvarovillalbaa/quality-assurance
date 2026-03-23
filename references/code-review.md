@@ -1,5 +1,71 @@
 # Code Review Reference
 
+## Review Workflow
+
+### Step 1 — Determine review target
+
+- **Remote PR**: user provides a PR number or URL (e.g. "review PR #123") → target that remote PR.
+- **Local changes**: no PR mentioned, or user says "review my changes" → target staged and unstaged working tree state.
+
+### Step 2 — Preparation
+
+#### Remote PR
+1. Checkout the PR:
+   ```bash
+   gh pr checkout <PR_NUMBER>
+   ```
+2. Run the project's standard verification suite:
+   ```bash
+   npm run preflight
+   ```
+3. Read the PR description and existing comments to understand the goal and prior discussion.
+
+#### Local changes
+1. Identify what changed:
+   ```bash
+   git status
+   git diff            # working tree
+   git diff --staged   # staged only
+   ```
+2. For substantial changes, offer to run `npm run preflight` before starting the review.
+
+### Step 3 — In-depth analysis
+
+Evaluate code changes across these pillars:
+
+- **Correctness** — does the code achieve its stated purpose without bugs or logical errors?
+- **Maintainability** — clean structure, modularity, adherence to established design patterns?
+- **Readability** — well-commented where necessary, consistently formatted per project style?
+- **Efficiency** — obvious performance bottlenecks or resource inefficiencies?
+- **Security** — potential vulnerabilities or insecure coding practices?
+- **Edge cases and error handling** — appropriate handling of edge cases and failures?
+- **Testability** — adequate test coverage? Suggest missing cases that would improve robustness.
+
+### Step 4 — Feedback structure
+
+Deliver the review in this order:
+
+1. **Summary** — high-level overview of the review.
+2. **Findings**:
+   - **Critical** — bugs, security issues, or breaking changes (blocks merge).
+   - **Improvements** — better code quality or performance (should fix before merge).
+   - **Nitpicks** — formatting or minor style issues (optional, non-blocking).
+3. **Conclusion** — clear recommendation: `Approved` or `Request Changes`.
+
+#### Tone
+- Be constructive, professional, and friendly.
+- Explain *why* a change is requested, not just what.
+- For approvals, acknowledge the specific value of the contribution.
+
+### Step 5 — Cleanup (remote PRs only)
+
+After delivering the review, ask the user if they want to switch back to the default branch:
+```bash
+git checkout main   # or master
+```
+
+---
+
 ## Review output contract
 
 When delivering a review, lead with findings, ordered by severity. Each finding should answer:
