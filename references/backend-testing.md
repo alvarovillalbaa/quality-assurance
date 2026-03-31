@@ -119,7 +119,7 @@ When true concurrency is hard to automate, define the exact manual or load-test 
 - use real DB for ORM behavior
 - freeze time when temporal logic matters
 - keep fixtures in `conftest.py` or local factories
-- for Django or DRF, exercise the real API client when routing, auth, middleware, or serializers matter
+- for Django or DRF, exercise the real API client when routing, auth, middleware, or serializers matter; see `django-drf-testing.md` for concrete patterns, Factory Boy setup, and common failure patterns
 - for async Python, test the framework-approved sync/async boundary instead of silently mixing blocking I/O into async code
 
 ### Node or TypeScript

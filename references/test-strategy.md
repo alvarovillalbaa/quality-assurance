@@ -3,11 +3,91 @@
 ## Contents
 
 - Selecting the proving layer
+- Strategy by component type
+- What to cover / skip
 - Red-green-refactor and bug-fix rules
 - Test design heuristics
 - Data and mocking rules
 - Coverage interpretation
 - Release-oriented test portfolios
+
+## Test Pyramid and Ratio Guide
+
+```
+       /\
+      /E2E\          ← few (slow, expensive)
+     /______\
+    /        \
+   /Integration\    ← medium
+  /____________\
+ /              \
+/   Unit Tests   \  ← many (fast, inexpensive)
+/________________\
+```
+
+**Target ratio for a balanced portfolio:**
+
+| Layer | Target share | Characteristics |
+|---|---|---|
+| Unit | ~70% | Fast, isolated, no I/O, cheap to write |
+| Integration | ~20% | Exercises real boundaries (DB, HTTP) |
+| E2E | ~10% | Slow, expensive, covers critical user flows only |
+
+Use this as a directional guide, not a hard rule. Repos with thin business logic and thick integrations may reasonably shift toward integration-heavy suites.
+
+## AI Application Testing Pyramid
+
+When the system includes LLMs, agents, RAG pipelines, or AI-assisted workflows, the standard 3-layer pyramid expands to 5 layers. Non-deterministic outputs require evaluation layers that do not exist in conventional suites.
+
+```
+            [ Human QA / Safety / Red Team ]
+                       1–5%
+            [ End-to-end agent workflows ]
+                       5–10%
+        [ Offline AI evals per capability/task ]
+                       10–20%
+     [ Contracts + integrations + retrieval/tools ]
+                       20–30%
+[ Deterministic unit tests: logic, schemas, filters, scoring ]
+                       40–60%
+```
+
+### Layer breakdown
+
+| Layer | Share | What to test | Tools / patterns |
+|---|---|---|---|
+| Deterministic unit tests | 40–60% | Pure logic, schema validation, filters, scoring functions, parsers, prompt builders | Jest, Vitest, pytest — no LLM calls |
+| Contracts + integrations + retrieval/tools | 20–30% | Tool call shapes, retrieval contracts (embeddings, vector search), API integration, mock LLM responses | MSW, pytest + httpx, contract tests |
+| Offline AI evals per capability/task | 10–20% | LLM output quality per capability: factuality, format compliance, refusal behavior, coherence | LLM-as-judge, reference datasets, eval frameworks (PromptFoo, Ragas, DeepEval) |
+| End-to-end agent workflows | 5–10% | Multi-step agent behavior, tool orchestration, state transitions, final answer correctness | Playwright, pytest E2E, replay harnesses |
+| Human QA / Safety / Red Team | 1–5% | Adversarial prompts, jailbreak attempts, bias probing, safety failures, edge cases that evals cannot catch | Red team checklists, structured human evaluation |
+
+### Key differences from the standard pyramid
+
+- **Evals replace some unit tests** for LLM-generated content. You cannot unit test a non-deterministic output; you evaluate it against criteria.
+- **Deterministic logic is still unit tested.** Prompt builders, parsers, filters, routing, scoring, and schema validation do not involve the LLM and must be fast and isolated.
+- **Tool contract tests are critical.** Agents depend on external tools; assert that tool call shapes, auth flows, and error handling match the spec before testing full agent behavior.
+- **E2E agent tests are expensive and flaky.** Keep them small, focused on critical flows, and seeded with known-good inputs. Use replay/snapshot patterns to avoid live LLM calls in CI.
+- **Human review is irreplaceable at the top.** Automated evals catch common failures; only humans catch nuanced safety, trust, and brand-alignment failures.
+
+### Offline eval patterns
+
+Use offline evaluations (no live user) to measure LLM output quality at scale:
+
+- **LLM-as-judge:** Send output + rubric to a stronger model. Score on criteria: accuracy, groundedness, format, helpfulness, safety.
+- **Reference datasets:** Curate golden input/output pairs. Run the pipeline against them on every commit and track regression.
+- **Task-specific metrics:** BLEU/ROUGE for translation/summarization, exact-match for extraction, pass@k for code generation, faithfulness for RAG.
+- **Threshold gates:** Block the release if eval scores drop below defined thresholds (e.g., factuality < 0.85 on critical dataset).
+
+Prefer established eval frameworks (PromptFoo, Ragas, DeepEval) over ad hoc scripts — they provide standardized metrics, CI integration, and regression tracking.
+
+### When to apply the AI pyramid
+
+Apply this pyramid (instead of the standard 3-layer one) when the system:
+- Calls an LLM as part of a user-facing or business-critical flow
+- Uses RAG (retrieval-augmented generation)
+- Runs autonomous agents with tool use
+- Generates structured data or takes actions based on LLM output
 
 ## Select the proving layer first
 
@@ -23,6 +103,21 @@ Pick the cheapest test that can actually prove the behavior. If a lower layer ca
 | Third-party contract compatibility | Contract or integration | Assert request/response shape |
 
 Use one primary proof path per behavior. Do not duplicate the same assertion in five layers unless each layer protects a different risk.
+
+## Strategy by Component Type
+
+| Component type | Primary test types |
+|---|---|
+| API endpoints | Unit (business logic), Integration (HTTP layer), Contract (consumers) |
+| Data pipelines | Input validation, transformation correctness, idempotency |
+| Frontend | Component tests, interaction tests, visual regression, accessibility |
+| Infrastructure | Smoke tests, chaos engineering, load tests |
+
+## What to Cover / Skip
+
+**Cover:** business-critical paths, error handling, edge cases, security boundaries, data integrity.
+
+**Skip:** trivial getters/setters, framework code, one-off scripts.
 
 ## Red-green-refactor is the default loop
 
@@ -263,3 +358,49 @@ def test_normalize_str_is_idempotent(s):
 - Time is frozen when testing time-dependent logic (`freezegun`, `vi.useFakeTimers`)
 - Randomness is seeded when testing probabilistic logic
 - Tests do not depend on execution order
+
+---
+
+## Quick Strategy Document Template
+
+When a new project or feature needs a documented testing strategy, output this structure:
+
+```markdown
+## Testing Strategy
+
+### Coverage Goals
+- Unit Tests: 80%+
+- Integration Tests: 60%+
+- E2E Tests: Critical user flows only
+
+### Test Execution Schedule
+- Unit: Every commit (local + CI)
+- Integration: Every PR
+- E2E: Before deployment / merge to main
+
+### Tools
+- Unit: Jest / Vitest (TS) or pytest (Python)
+- Integration: Supertest (Node) / httpx AsyncClient (Python)
+- E2E: Playwright (preferred) or Cypress
+- Coverage: Istanbul/nyc / pytest-cov
+
+### CI/CD Integration
+- Fail PR if unit coverage drops below threshold
+- Run E2E on staging before production promotion
+- Gate merge to main on integration suite pass
+
+### When to escalate
+- 3+ mocks in a unit test → rewrite as integration test
+- Flaky test → quarantine, root-cause, fix before unquarantining
+- Coverage drop without explanation → block merge, investigate
+```
+
+---
+
+## External References
+
+- [Test Pyramid — Martin Fowler](https://martinfowler.com/articles/practical-test-pyramid.html)
+- [JavaScript Testing Best Practices — goldbergyoni](https://github.com/goldbergyoni/javascript-testing-best-practices)
+- [Jest](https://jestjs.io/)
+- [Playwright](https://playwright.dev/)
+- [pytest](https://docs.pytest.org/)

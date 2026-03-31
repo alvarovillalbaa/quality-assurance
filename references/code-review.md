@@ -82,6 +82,96 @@ Preferred severity levels:
 - `question`: seeks missing context
 - `nit`: cosmetic and optional
 
+### Feedback priority icons (quick-scan format)
+
+| Level | Icon | Meaning | Action |
+|-------|------|---------|--------|
+| Blocker | 🔴 | Bug / security / crash | Must fix before merge |
+| Major | 🟡 | Logic issue / test gap | Should fix before merge |
+| Minor | 🟢 | Style / naming | Nice to fix |
+| Suggestion | 💡 | Alternative approach | Consider for future |
+
+### Review scope limits
+
+| Lines changed | Recommendation |
+|---------------|----------------|
+| < 200 | Single review session |
+| 200–400 | Review in chunks |
+| > 400 | Request PR split |
+
+### Minimum findings standard
+
+Every review should surface at least 3 actionable observations. If an initial pass yields fewer, re-examine shared state, async patterns, error paths, and test coverage before concluding. A clean-looking diff is not the same as a correct one.
+
+## Feedback templates
+
+Use these templates for inline comments to ensure each finding is actionable.
+
+### 🔴 Blocker
+```markdown
+🔴 **BLOCKER: [Issue title]**
+
+[Describe the problem and why it's a blocker.]
+
+**Fix:** [Concrete fix with code if applicable.]
+
+**Why:** [What risk or contract violation this prevents.]
+```
+
+### 🟡 Major
+```markdown
+🟡 **MAJOR: [Issue title]**
+
+[Describe what's missing or wrong and the impact.]
+
+**Suggestion:** [Code or approach that resolves it.]
+```
+
+### 🟢 Minor
+```markdown
+🟢 **minor:** [One-line description — keep it short and low-pressure.]
+```
+
+### 💡 Suggestion
+```markdown
+💡 **suggestion:** [Alternative approach or future improvement.]
+
+Not blocking, but worth tracking for a follow-up PR.
+```
+
+---
+
+## Review questions to ask
+
+Use these probing questions during analysis before writing findings.
+
+### Logic
+- What happens when X is null / empty / negative / zero?
+- Is there a race condition here?
+- What if the API call fails mid-sequence?
+- What breaks if this branch runs twice?
+- If a retry happens, is the operation idempotent?
+
+### Security
+- Is user input validated and sanitized before use?
+- Are auth and permission checks in place on every path?
+- Any secrets, tokens, or PII that could leak?
+- Does this change alter a public field, payload, URL, event, or SQL shape?
+
+### Testability
+- How would you test this in isolation?
+- Are dependencies injectable or swappable?
+- Is there a test for the happy path? For each edge case?
+- If the reviewer removed every new test, what behavior would no longer be protected?
+
+### Maintainability
+- Will the next developer understand this without context?
+- Is this doing too many things (violates SRP)?
+- Is business logic duplicated or scattered?
+- Is there any loop that hides I/O or queries?
+
+---
+
 ## High-signal review checklist
 
 Review in this order:
@@ -219,7 +309,21 @@ Before marking any PR ready for review, verify:
 
 ---
 
-## Review Anti-Patterns
+## Review etiquette
+
+| ✅ Do | ❌ Don't |
+|-------|---------|
+| "Have you considered…?" | "This is wrong" |
+| Explain why it matters | Just say "fix this" |
+| Acknowledge good code | Only point out negatives |
+| Suggest, don't demand | Be condescending |
+| Review < 400 lines at a time | Review 2000 lines at once |
+| Always include a proposed alternative | Leave comments without suggested fixes |
+| Review the code, not the person | Make it personal |
+
+---
+
+## Review anti-patterns
 
 | Anti-Pattern | What To Do Instead |
 |---|---|
@@ -231,3 +335,13 @@ Before marking any PR ready for review, verify:
 | Ignoring security concerns | Flag every input validation gap |
 | "LGTM" on untested code | Require tests before approval |
 | Approving with unresolved critical comments | Block merge until resolved |
+
+---
+
+## Gotchas
+
+- **Reviewing > 400 lines at once misses issues** — chunk reviews to 200–400 lines maximum.
+- **Nitpicking style while missing logic bugs is the #1 review failure** — prioritize correctness over formatting.
+- **Code that compiles can still have race conditions** — always check shared state and async patterns.
+- **Review comments without suggested fixes are unhelpful** — always include a proposed alternative.
+- **Verify the PR actually solves the linked issue** — don't just review the code in isolation.
